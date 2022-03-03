@@ -1,0 +1,236 @@
+/* Christian Perez
+EE3420 Dr. Stapltons modified shell code for traffic light simulator
+*/
+
+/* include #define DEBUG to allow for debugging tools and messages
+ * comment this out to stop debug messaging
+*/
+#define DEBUG
+
+const int IN1,
+          IN2,
+          IN3,
+          IN4;
+
+/* the ee3420_pi.h header includes a lot of setup/shutdown functionality */
+/* the header was written for this class and should be included in every lab 
+program */
+#include "ee3420_pi.h"
+/* the ee3420_pi_aux_board.h header includes definitions for the auxiliary PCB. */
+/* the header should be included */
+#include "ee3420_pi_aux_board.h"
+
+//global variables
+char host_receive_buffer[81];
+int host_receive_buffer_pointer=0;
+char host_received_char;
+int host_received_instruction_complete=0;
+char host_buffer[81];
+char temp_string[140];
+char current_key;
+char command_string[100];
+char command_parameters[max_parameter_limit][max_parameter_length];    
+char keys_received[3]={0,0,0};
+int loop_active;
+int override = 0;
+//end of variables specifically for this program
+ 
+ int stepperState = 0,
+     increment = 1,
+     stepperOn = 1;
+ 
+ const int step[8][4] =
+ {
+     {0,0,0,1}, //state 1
+     {0,0,1,1}, //state 2
+     {0,0,1,0}, //state 3
+     {0,1,1,0}, //state 4
+     {0,1,0,0}, //state 5
+     {1,1,0,0}, //state 6
+     {1,0,0,0}, //state 7
+     {1,0,0,1}; //state 8
+                    
+ void stepperReset(void)
+ {
+     gpioWrite(IN1, 0);
+     gpioWrite(IN2, 0);
+     gpioWrite(IN3, 0);
+     gpioWrite(IN4, 0);
+ }
+ 
+ void stepperMove()
+ {
+     gpioWrite(IN1, step[StepperState][0]);
+     gpioWrite(IN2, step[stepperState][1]);
+     gpioWrite(IN3, step[stepperState][2]);
+     gpioWrite(IN4, step[stepperstate][3]);
+ }
+ 
+ void stepperNext()
+ {
+     stepperState += increment;
+     
+     if(stepperState > 7) 
+     {
+         stepperState = (stepperState % 7) - 1;
+     }
+     
+     if(stepperState < 0)
+     {
+         stepperstate = (stepperState + 8);
+     }
+     
+     stepperMove();
+     
+ }
+ 
+ 
+ 
+ 
+ 
+ 
+ void all_leds_off(void)
+ {
+    gpioWrite(LED_GREEN,0);
+    gpioWrite(LED_YELLOW,0);  
+    gpioWrite(LED_RED,0);
+    gpioWrite(LED_BLUE,0);
+    gpioWrite(LED_WHITE,0);
+    
+        sprintf(command_string,"LED:RED:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+        sprintf(command_string,"LED:YELLOW:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+    
+        sprintf(command_string,"LED:RED:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+        sprintf(command_string,"LED:BLUE:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+        sprintf(command_string,"LED:WHITE:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+ }
+
+ void interrupt()
+{
+    override = 1;
+}
+
+void checkForKeypress() 
+{
+        //request a key from the 4x4 keypad on the Mega
+        sprintf(command_string,"KEYPAD:?\n");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+        if(serial_device.last_error_code < 0)
+        {
+            display_serial_device_error(serial_device.last_error_code);
+        }	
+        //read key returned or "NONE" message
+        if(!strcmp(&serial_command_parameters[1][0],"NONE"))
+        {
+            current_key=0;
+        }
+        else
+        {
+            //If response is not "NONE" assume key received
+            //move last two keystrokes back in buffer
+            keys_received[2]=keys_received[1]; 
+            keys_received[1]=keys_received[0];
+            keys_received[0]=serial_command_parameters[1][0]; //current key
+            current_key = serial_command_parameters[1][0];
+            
+        }
+        
+        switch(current_key)
+        {
+            case '1':
+            {
+                break;
+            }  //end of case '1'
+            case '2':
+            {
+            
+                break;
+            }	//end of case '2'
+            case '3':
+            {
+    
+                break;
+            }  //end of case '3'
+            case '4':
+            {
+                
+                    
+                break;
+            }  //end of case '4'
+            case '*':
+            case 'e':
+            case 'E':  //on 4x4 keypad key may be labeled *, e, or E
+            {
+                //printf("* - Press '*' three times in sequence to end program\n");
+                if(	(keys_received[0] == keys_received[1]) && (keys_received[0] == keys_received[2]) )
+                {
+                    //3 '*' in sequence ends program
+                    loop_active = LOGIC_FALSE;
+                    printf("Three \'*\' in a row pressed, ending program.\n");
+                }
+
+                break;
+            }  //end of case '*'
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+            case 'a':
+            case 'A':
+            case 'b':
+            case 'B':
+            case 'c':
+            case 'C':
+            case 'd':
+            case 'D':
+            case 'f':
+            case 'F':
+            case '#':
+            {
+                break;
+            }
+            
+            default:
+            {
+                //display_menu();
+                break;	
+            }
+        }  //end of switch(keys_received[0])
+}
+// end of function declarations
+
+int main ()
+{
+    
+    
+    
+	loop_active = LOGIC_TRUE;
+	
+    while(loop_active)
+    {
+            all_leds_off();
+        
+        
+    }
+	
+	
+	
+	
+	
+}
