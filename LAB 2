@@ -10,11 +10,9 @@ EE3420 Dr. Stapltons modified shell code for traffic light simulator
 const int IN1,
           IN2,
           IN3,
-          IN4;
-
-/* the ee3420_pi.h header includes a lot of setup/shutdown functionality */
-/* the header was written for this class and should be included in every lab 
-program */
+          IN4,
+          microPer = 1000000; //micro seconds per
+          
 #include "ee3420_pi.h"
 /* the ee3420_pi_aux_board.h header includes definitions for the auxiliary PCB. */
 /* the header should be included */
@@ -33,11 +31,11 @@ char command_parameters[max_parameter_limit][max_parameter_length];
 char keys_received[3]={0,0,0};
 int loop_active;
 int override = 0;
-//end of variables specifically for this program
  
  int stepperState = 0,
      increment = 1,
-     stepperOn = 1;
+     stepperOn = 1,
+     stepsPer = 10; //steps per second
  
  const int step[8][4] =
  {
@@ -86,7 +84,8 @@ int override = 0;
  
  
  
- void lcdDisplayText(char text[]) {
+ void lcdDisplayText(char text[]) 
+ {
     sprintf(command_string,"LCD:TEXT:%s\n", text);
 
     sprintf(temp_string,"Sending request ... %s",command_string);
@@ -95,13 +94,15 @@ int override = 0;
     sprintf(temp_string,"Response ... %s",serial_receive_buffer);
     debug_message(DEBUG_INFO,temp_string);
     process_serial_response(serial_receive_buffer);
+    
     if(serial_device.last_error_code < 0)
     {
         display_serial_device_error(serial_device.last_error_code);
     }
 }
 
-void lcdReset() {
+void lcdReset() 
+{
     sprintf(command_string,"LCD:CLEAR\n");
     sprintf(temp_string,"Sending request ... %s",command_string);
     debug_message(DEBUG_INFO,temp_string);
@@ -109,20 +110,20 @@ void lcdReset() {
     sprintf(temp_string,"Response ... %s",serial_receive_buffer);
     debug_message(DEBUG_INFO,temp_string);
     process_serial_response(serial_receive_buffer);
+    
     if(serial_device.last_error_code < 0)
     {
         display_serial_device_error(serial_device.last_error_code);
     }
 }
 
-void updateLCD() {
-    snprintf(lcd_text, sizeof(lcd_text), "M%i S%i DIR%i", CURRENT_MODE, STEPS_PER_SECOND, STEPPER_INC);
+void updateLCD() 
+{
+    snprintf(lcd_text, sizeof(lcd_text), "M%i S%i DIR%i",stepperState, stepsPer, increment);
     
     lcdReset();
     lcdDisplayText(lcd_text);
 }
- 
- 
  
  
  void all_leds_off(void)
@@ -190,6 +191,7 @@ void checkForKeypress()
         {
             case '1':
             {
+                
                 break;
             }  //end of case '1'
             case '2':
@@ -212,11 +214,12 @@ void checkForKeypress()
             case 'e':
             case 'E':  //on 4x4 keypad key may be labeled *, e, or E
             {
+                stepperOn = 0;
                 //printf("* - Press '*' three times in sequence to end program\n");
                 if(	(keys_received[0] == keys_received[1]) && (keys_received[0] == keys_received[2]) )
                 {
                     //3 '*' in sequence ends program
-                    loop_active = LOGIC_FALSE;
+                    loop_active = 0;
                     printf("Three \'*\' in a row pressed, ending program.\n");
                 }
 
@@ -270,3 +273,4 @@ int main ()
 	
 	
 }
+
