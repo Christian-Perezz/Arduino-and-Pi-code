@@ -7,10 +7,10 @@ EE3420 Dr. Stapltons modified shell code for traffic light simulatorS
 */
 #define DEBUG
 
-const int IN1,
-          IN2,
-          IN3,
-          IN4,
+const int IN1 = 24,
+          IN2 = 25,
+          IN3 = 5,
+          IN4 = 11,
           milliPer = 1000000; //micro seconds per
           
 #include "ee3420_pi.h"
@@ -34,11 +34,13 @@ int override = 0;
  
  int stepperState = 0,
      increment = 1,
-     stepperOn = 1,
+     stepperOn = 0,
      stepperMode = 1,
      stepsPer = 1; //steps per second
+     
+ char lcdText[100];
  
- double milliPerStep = 0;
+ int milliPerStep = 0;
  const int step[8][4] = //array that gives a specific time to stay on/off
  {
      {0,0,0,1}, //state 1
@@ -48,8 +50,9 @@ int override = 0;
      {0,1,0,0}, //state 5
      {1,1,0,0}, //state 6
      {1,0,0,0}, //state 7
-     {1,0,0,1}; //state 8
-                    
+     {1,0,0,1}, //state 8
+ };
+ 
  void stepperReset(void) //stops/resets motot
  {
      gpioWrite(IN1, 0);
@@ -60,10 +63,10 @@ int override = 0;
  
  void stepperMove() //turns on motor according to postion in array
  {
-     gpioWrite(IN1, step[StepperState][0]);
+     gpioWrite(IN1, step[stepperState][0]);
      gpioWrite(IN2, step[stepperState][1]);
      gpioWrite(IN3, step[stepperState][2]);
-     gpioWrite(IN4, step[stepperstate][3]);
+     gpioWrite(IN4, step[stepperState][3]);
  }
  
  void stepperNext() //logic for stepper motor, repeats once it ends
@@ -77,7 +80,7 @@ int override = 0;
      
      if(stepperState < 0)
      {
-         stepperstate = (stepperState + 8);
+         stepperState = (stepperState + 8);
      }
      
      stepperMove();
@@ -121,10 +124,10 @@ void lcdReset() //resets LCD information to blank
 
 void updateLCD() //update LCD screen
 {
-    snprintf(lcd_text, sizeof(lcd_text), "M%i S%i DIR%i",stepperState, milliPerStep, increment);
+    snprintf(lcdText, sizeof(lcdText), "M%i S%i DIR%i",stepperState, milliPerStep, increment);
     
     lcdReset();
-    lcdDisplayText(lcd_text);
+    lcdDisplayText(lcdText);
 }
 
 
@@ -272,7 +275,7 @@ int main ()
     
     if(ee3420_startup() < 0)
     {
-        return(ee3420_shutdown();) //error checking 
+        return(ee3420_shutdown()); //error checking 
     }
     
     ee3420_pi_aux_board_setup();
@@ -283,13 +286,13 @@ int main ()
     {
         all_leds_off();
         gpioWrite(LED_GREEN,1);
-        gpioDelay(0,1,0);
+        gpioSleep(0,1,0);
         stepperOn = 1; //enters if
         
         if(stepperOn)
         {
             stepperNext();
-            stepPer += 1;
+            stepsPer += 1;
 
             gpioWrite(LED_GREEN,0);
 
@@ -303,5 +306,5 @@ int main ()
 	stepperReset();
     lcdReset(); // reset lcd and stepper motor
 	
-	return(ee3420_shutdown())	//shutdown call routine
+	return(ee3420_shutdown());	//shutdown call routine
 } //end
