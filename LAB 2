@@ -130,7 +130,6 @@ void updateLCD() //update LCD screen
     lcdDisplayText(lcdText);
 }
 
-
  void all_leds_off(void) // turns of LEDs
  {
     gpioWrite(LED_GREEN,0);
@@ -242,6 +241,10 @@ void checkForKeypress()
                 break;
             }  //end of case '*'
             case '5':
+            {
+                override = 0;
+            }
+            
             case '6':
             case '7':
             case '8':
@@ -270,6 +273,16 @@ void checkForKeypress()
 }
 // end of function declarations
 
+/*void interupt()
+{
+    override = 1;
+    
+    while(override ==1)
+    {
+        checkForKeypress();
+    }
+}*/
+
 int main ()
 {
     
@@ -279,32 +292,32 @@ int main ()
     }
     
     ee3420_pi_aux_board_setup();
-
+    //gpioSetAlertFunc(BUTTON_RIGHT, interupt);
 	loop_active = 1;
 	
     while(loop_active)
     {
         all_leds_off();
-        gpioWrite(LED_GREEN,1);
-        gpioSleep(0,1,0);
+        gpioSleep(0,.1,0);
         stepperOn = 1; //enters if
+        updateLCD();
         
         if(stepperOn)
         {
             stepperNext();
             stepsPer += 1;
-
-            gpioWrite(LED_GREEN,0);
-
             stepperOn = 0; //exits if          
         }
+        
+        checkForKeypress();
 
-        milliPerStep = 1000 * (1/ (double)stepsPer); //display line for milli/s on LCD
+        milliPerStep = 1000 * (stepsPer/0.1); //display line for milli/s on LCD
     }
     //exits loop after keypress 
 
 	stepperReset();
-    lcdReset(); // reset lcd and stepper motor
+    all_leds_off();
+    lcdReset(); // reset lcd and stepper motor and LEDs
 	
 	return(ee3420_shutdown());	//shutdown call routine
 } //end
