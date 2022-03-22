@@ -7,12 +7,12 @@ EE3420 Dr. Stapltons modified shell code for stepper motor control
 */
 #define DEBUG
 
-const int IN1 = 24,
-          IN2 = 25,
-          IN3 = 5,
-          IN4 = 11,
-          milliPer = 1000000; //micro seconds per
-          
+const int pw1 = 24,
+		  pw2 = 25,
+          m1 = 9,
+          m2 = 11,
+          sm1 = 5;
+     
 #include "ee3420_pi.h"
 /* the ee3420_pi_aux_board.h header includes definitions for the auxiliary PCB. */
 /* the header should be included */
@@ -35,30 +35,35 @@ int override = 0;
 char lcdText[100];
 
 int dutyCycle = 0,
+	dutyCycle1 = 0,
     direction = 0,
     servo_pw = 0;
-
-const int m1 = 24,
-          m2 = 25,
-          sm1 = 5;
 
 void dc_motor_direction()
 {
     if(dutyCycle < 0)
     {
-        direction = (-1);
-        gpioPWM(m2, dutyCycle);
+        direction = 2;
+        dutyCycle1 = (dutyCycle * (-1));
+        gpioPWM(pw2, dutyCycle1);
+        gpioWrite(m1, 0);
+        gpioWrite(m2, 1);
+        
     }
     else if(dutyCycle > 0)
     {
         direction = 1;
-        gpioPWM(m1, dutyCycle);
+        gpioPWM(pw1, dutyCycle);
+        gpioWrite(m2, 0);
+        gpioWrite(m1, 1);
     }
-    else if (dutycycle == 0)
+    else if (dutyCycle == 0)
     {
         direction = 0;
-        gpioPWM(m1, 0);
-        gpioPWM(m2, 0);
+        gpioPWM(pw1, 0);
+        gpioPWM(pw2, 0);
+        gpioWrite(m1, 0);
+        gpioWrite(m2, 0);
     }
 }
 
@@ -103,7 +108,7 @@ void lcdReset() //resets LCD information to blank
 
 void updateLCD() //update LCD screen
 {
-    snprintf(lcdText, sizeof(lcdText), "D:%i DIR%i",dutyCycle, direction);
+    snprintf(lcdText, sizeof(lcdText), "D:%i SER:%i DIR%i",dutyCycle, servo_pw, direction);
     
     lcdReset();
     lcdDisplayText(lcdText);
@@ -146,18 +151,22 @@ void checkForKeypress()
             case '1':
             {
                 servo_pw += 1;
+                break;
             }
             case '2':
             {
                 servo_pw += 10;
+                break;
             }
             case '3':
             {
                 servo_pw += 100;
+                break;
             }
             case '4':
             {
                 servo_pw -= 1;
+                break;
             }
             case '*':
             case 'e':
@@ -176,6 +185,7 @@ void checkForKeypress()
             case '5':
             {
                 servo_pw -= 10;
+                break;
             }
             case '6':
             {
@@ -184,14 +194,17 @@ void checkForKeypress()
             case '7':
             {
                 servo_pw = 500;
+                break;
             }
             case '8':
             {
                 servo_pw = 1500;
+                break;
             }
             case '9':
             {
                 servo_pw = 2500;
+                break;
             }
             case 'a':
             case 'A':
