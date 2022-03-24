@@ -8,7 +8,7 @@ EE3420 Dr. Stapltons modified shell code for stepper motor control
 #define DEBUG
 
 const int pw1 = 24,
-	  pw2 = 25,
+		  pw2 = 25,
           m1 = 9,
           m2 = 11,
           sm1 = 5;
@@ -37,7 +37,7 @@ char lcdText[100];
 int dutyCycle = 0,
 	dutyCycle1 = 0,
     direction = 0,
-    servo_pw = 0;
+    servo_pw = 1500;
 
 void dc_motor_direction()
 {
@@ -69,7 +69,19 @@ void dc_motor_direction()
 
 void servo()
 {
-    sprintf(command_string,"SERVO:3:%i/n", (servo_pw));
+	if(servo_pw < 500)
+	{
+		servo_pw += 100;
+	}
+	
+	if(servo_pw > 2500)
+	{
+		servo_pw -= 100;
+	}
+	
+    sprintf(command_string,"SERVO:3:%i\n", (servo_pw));
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
 }
  
  
@@ -77,10 +89,10 @@ void servo()
  {
     sprintf(command_string,"LCD:TEXT:%s\n", text);
 
-    sprintf(temp_string,"Sending request ... %s",command_string);
+    
     debug_message(DEBUG_INFO,temp_string);		
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
-    sprintf(temp_string,"Response ... %s",serial_receive_buffer);
+    
     debug_message(DEBUG_INFO,temp_string);
     process_serial_response(serial_receive_buffer);
     
@@ -93,10 +105,10 @@ void servo()
 void lcdReset() //resets LCD information to blank
 {
     sprintf(command_string,"LCD:CLEAR\n");
-    sprintf(temp_string,"Sending request ... %s",command_string);
+    
     debug_message(DEBUG_INFO,temp_string);
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
-    sprintf(temp_string,"Response ... %s",serial_receive_buffer);
+    
     debug_message(DEBUG_INFO,temp_string);
     process_serial_response(serial_receive_buffer);
     
@@ -108,7 +120,7 @@ void lcdReset() //resets LCD information to blank
 
 void updateLCD() //update LCD screen
 {
-    snprintf(lcdText, sizeof(lcdText), "D:%i SER:%i DIR%i",dutyCycle, servo_pw, direction);
+    snprintf(lcdText, sizeof(lcdText), "DC:%i S:%i D:%i",dutyCycle, servo_pw, direction);
     
     lcdReset();
     lcdDisplayText(lcdText);
@@ -145,7 +157,7 @@ void checkForKeypress()
             case '0':
             {
                 dutyCycle = 0;
-                servo_pw = 0;
+                servo_pw = 1500;
                 break;
             }
             case '1':
@@ -190,6 +202,7 @@ void checkForKeypress()
             case '6':
             {
                 servo_pw -= 100;
+                break;
             }
             case '7':
             {
@@ -262,8 +275,11 @@ int main()
         dc_motor_direction();
         servo();
         updateLCD();
+        
     }
-
+ 
+ servo_pw = 1500;
+    
  lcdReset(); // reset lcd and stepper motor and LEDs
 	
  return(ee3420_shutdown());	//shutdown call routine
