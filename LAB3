@@ -8,7 +8,7 @@ EE3420 Dr. Stapltons modified shell code for stepper motor control
 #define DEBUG
 
 const int pw1 = 24,
-		  pw2 = 25,
+	  pw2 = 25,
           m1 = 9,
           m2 = 11,
           sm1 = 5;
@@ -69,7 +69,7 @@ void dc_motor_direction()
 
 void servo()
 {
-    gpioServo(sm1, servo_pw);
+    sprintf(command_string,"SERVO:3:%i/n", (servo_pw));
 }
  
  
