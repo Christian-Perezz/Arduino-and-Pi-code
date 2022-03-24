@@ -1,0 +1,804 @@
+/*
+ * example2.ino
+ * revision date: 30 May 2021
+ * Written by: William Stapleton
+ * The purpose of this program is to demonstrate the associated header file functions
+ * for building a communications protocol with the Raspberry Pi 4 which will be
+ * needed for the EE 3420 laboratory assignments in the Spring 2021 semester.
+ * This code is designed for use on the Arduino Mega 2560.
+ * The communication protocol is required for operating cooperatively with a Raspberry Pi 
+ * with the Arduino Mega 2560 in the role of "smart peripheral".
+ * The Arduino Mega will be operating with a complementary program filling this role.
+ * The ee3420_mega.h header will need to be in the same directory as this file.
+ */
+
+/* the ee3420_mega.h header includes a lot of setup/shutdown functionality */
+/* the header was written for this class and should be included in every lab program */
+#include "ee3420_mega.h"
+
+/* this header includes definitions and initialization for the devices on */
+/*the custom PCB for the Mega */
+/* please note reliance on libraries "Keypad.h" and "LiquidCrystal.h" which may need to be installed */
+#include "ee3420_mega_aux_board.h"
+//#include "ee3420_mega_handlers.h"
+#include "keypad.h"
+
+
+void setup() {
+  // put your setup code here, to run once:
+
+  //initialize the serial port that will communicate to the Raspberry Pi over USB
+  Serial.begin(115200, SERIAL_8N1);
+
+  pinMode(LED_BUILTIN,OUTPUT);  //built in LED on Arduino Mega is pin 13
+  digitalWrite(LED_BUILTIN,0);  //turn built in LED off
+    
+  ee3420_mega_aux_setup();
+ 
+  //wait for the ENQ/ACK handshake to be initialized by the Raspberry Pi
+  //function should be called in setup()
+  //function defined in ee3420_mega.h
+  serial_wait_for_enquire();  
+
+  digitalWrite(LED_BUILTIN,1);  //turn built in LED on to indicate synchronization with remote microprocessor
+
+  //initially clear the serial command receive buffer in case there was random data in the variables on startup
+  //this should always be done before entering loop()
+  clear_serial_receive_buffer();
+   
+}  //end of setup()
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  /* serial_build_command will build a command string one character at a time*/
+  /* It will gether characters until a full command line is built */
+  /* The function is non-blocking if no characters are available */
+  /* Once a complete command is available, the global variable serial_received_instruction_complete is set */
+  serial_build_command();
+  
+  /*only parse a command and try to execute once a complete command is available */
+  if(serial_received_instruction_complete)
+  {
+    /*starting a new command, make a note that it isn't complete */
+    serial_command_execution_complete=0;
+
+    //in case this is a LCD:TEXT command, copy the string before parsing,
+    //skipping the first 9 characters "LCD:TEXT:"
+    strcpy(lcd_text_string, &serial_receive_buffer[9]);
+  
+    /*break command into parameters */
+    parse_command_string(serial_receive_buffer, serial_command_parameters, parameter_separators);
+    /*for ease of comparision, make parameters uniformly uppercase */
+    make_command_parameters_uppercase(serial_command_parameters);
+
+    /* what follows here should be a series of checks to interpret the parsed command and execute */
+    /* successfule execution of a command should always set serial_command_execution_complete */
+    if( !strcmp(&serial_command_parameters[0][0],"ID") )
+    {
+      ID_handler();
+    }
+    
+    if( !strcmp(&serial_command_parameters[0][0],"KEYPAD") )
+    {
+      KEYPAD_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"LCD") )
+    {
+      LCD_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"LED") )
+    {
+      LED_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"SWITCH") )
+    {
+      SWITCH_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"BUTTON") )
+    {
+      BUTTON_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"BUZZER") )
+    {
+      BUZZER_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"PWM") )
+    {
+      PWM_handler();
+    }    
+
+    if( !strcmp(&serial_command_parameters[0][0],"ADC") )
+    {
+      ADC_handler();
+    }    
+
+    if( !strcmp(&serial_command_parameters[0][0],"DCMOTOR") )
+    {
+      DCMOTOR_handler();
+    }   
+
+    if( !strcmp(&serial_command_parameters[0][0],"SERVO") )
+    {
+      SERVO_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"STEPPER") )
+    {
+      STEPPER_handler();
+    }
+
+    if( !strcmp(&serial_command_parameters[0][0],"MAX7219") )
+    {
+      MAX7219_handler();
+    }    
+
+    if( !strcmp(&serial_command_parameters[0][0],"DS3231") )
+    {
+      DS3231_handler();
+    }    
+
+    if( !strcmp(&serial_command_parameters[0][0],"MPU6050") )
+    {
+      MPU6050_handler();
+    }    
+
+    if( !strcmp(&serial_command_parameters[0][0],"DHT11") )
+    {
+      DHT11_handler();
+    }    
+
+    if( !strcmp(&serial_command_parameters[0][0],"SEG7") )
+    {
+      SEG7_handler();
+    }    
+
+    if( !strcmp(&serial_command_parameters[0][0],"AT24C32") )
+    {
+      AT24C32_handler();
+    }  
+
+
+/*************************************************************************************************/
+/* PUT YOUR ADDITIONAL FUNCTIONS HERE AND KEEP THE MAIN STRUCTURE INTACT FOR BEST RESULTS                   */
+/*************************************************************************************************/
+
+    /* If this point is reached without executng a command, return an error message */
+    if(!serial_command_execution_complete)
+    {
+      Serial.write(NACK);
+      Serial.print("ERROR:");
+      Serial.println(ERROR_UNKNOWN_COMMAND);
+      serial_command_execution_complete=1;
+    }
+
+    // clear the buffer and clear serial_received_instruction_complete to prepare for next command */
+    clear_serial_receive_buffer();
+  }  //end of if(serial_received_instruction_complete)
+
+  /*
+   * What follows is a template for including periodic actions in the main loop 
+   * that does not require blocking "busy" loop.
+   * This example program does not require any specific periodic actions but this is
+   * a common enough need that thie template code is included here.
+   */
+
+   int now;
+   int last_action_time;
+   int delay_duration=1000;  //this can be whatever amunt of time you want
+
+   now=millis();  //reads the system time in milliseconds
+   if( (now-last_action_time) > delay_duration)
+   {
+    //here is where you do the periodic action
+    last_action_time=now;  //be sure to update the last_action_time when you act
+   }
+  
+}  //end of loop()
+
+
+
+void ID_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"ID") &&
+    !strcmp(&serial_command_parameters[1][0],"TYPE") 
+    )
+    {
+      if(!strcmp(&serial_command_parameters[2][0],"?"))
+      {
+        Serial.write(ACK);
+        Serial.print("ID:TYPE:");           //output the first part of the response without a newline
+        Serial.println(my_device_type);     //complete the response and end with a newline
+        serial_command_execution_complete=1;  //indicates completed command
+      }
+      else
+      {
+        strcpy(serial_device_type,&serial_command_parameters[2][0]);
+        Serial.write(ACK);
+        Serial.println("OK");
+        serial_command_execution_complete=1;
+      }
+    }
+    // end of ID:TYPE    
+  
+    // beginning of ID:NAME
+    if( !strcmp(&serial_command_parameters[0][0],"ID") &&
+        !strcmp(&serial_command_parameters[1][0],"NAME") 
+      )
+    {
+      if(!strcmp(&serial_command_parameters[2][0],"?"))
+      {
+        Serial.write(ACK);
+        Serial.print("ID:NAME:");
+        Serial.println(my_device_name);
+        serial_command_execution_complete=1;  //indicates completed command
+      }
+      else
+      {
+        strcpy(serial_device_name,&serial_command_parameters[2][0]);
+        Serial.write(ACK);
+        Serial.println("OK");
+        serial_command_execution_complete=1;
+      }
+    }
+    // end of ID:NAME 
+  
+  // check for ID with unknown parameter
+  // must appear after all other options for ID
+  if( !strcmp(&serial_command_parameters[0][0],"ID") &&
+    (!serial_command_execution_complete) 
+  )
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }   
+
+}  //end of ID_handler()
+
+void KEYPAD_handler()
+{
+    // beginning of KEYPAD
+    //KEYPAD:? is acceptable
+    if( !strcmp(&serial_command_parameters[0][0],"KEYPAD") )
+    {
+      if(!strcmp(&serial_command_parameters[1][0],"?"))
+      {
+        Serial.write(ACK);
+        Serial.print("KEYPAD:");           //output the first part of the response without a newline
+
+        keypad_current_key = keypad.getKey();
+        if (keypad_current_key != NO_KEY)
+        {
+          Serial.println(keypad_current_key);
+        }
+        else
+        {
+          Serial.println("NONE");
+        }
+        
+        serial_command_execution_complete=1;  //indicates completed command
+      }
+    }
+    // end of KEYPAD 
+
+    // check for KEYPAD with unknown parameter
+    // must appear after all other options for KEYPAD
+    if( !strcmp(&serial_command_parameters[0][0],"KEYPAD") &&
+        (!serial_command_execution_complete) 
+      )
+    {
+        Serial.write(NACK);
+        Serial.print("ERROR:");
+        Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+        serial_command_execution_complete=1;  //indicates completed command
+    }
+    // end of check for KEYPAD with unknown parameter
+  
+}  //end of KEYPAD_handler()
+
+
+void LCD_handler()
+{
+      // beginning of LCD
+    //LCD:CLEAR is acceptable
+    //LCD:CURSOR:<row>:<col> is acceptable
+    //LCD:TEXT:<character(s)> is acceptable
+    
+    if( !strcmp(&serial_command_parameters[0][0],"LCD") )
+    {
+      if(!strcmp(&serial_command_parameters[1][0],"CLEAR"))
+      {
+        lcd.clear();
+        Serial.write(ACK);
+        Serial.println("OK");           //output the first part of the response without a newline
+        serial_command_execution_complete=1;  //indicates completed command
+      } //end of if(!strcmp(&serial_command_parameters[1][0],"CLEAR"))
+      
+      if(!strcmp(&serial_command_parameters[1][0],"CURSOR"))
+      {
+        lcd_current_row = atoi(&serial_command_parameters[2][0]);
+        lcd_current_col = atoi(&serial_command_parameters[3][0]);
+        if( lcd_current_row < 0 || 
+            lcd_current_row >= lcd_rows ||
+            lcd_current_col < 0 || 
+            lcd_current_col >= lcd_cols 
+          )
+        {
+          Serial.write(NACK);
+          Serial.print("ERROR:");
+          Serial.println(ERROR_INVALID_DATA);  
+          serial_command_execution_complete=1;  //indicates completed command          
+        }
+        else
+        {
+          lcd.setCursor(lcd_current_col, lcd_current_row);
+          Serial.write(ACK);
+           Serial.println("OK");           //output the first part of the response without a newline
+         serial_command_execution_complete=1;  //indicates completed command 
+        }
+      }  //end of if(!strcmp(&serial_command_parameters[1][0],"CURSOR"))
+
+      if(!strcmp(&serial_command_parameters[1][0],"TEXT"))
+      {
+        lcd.print(lcd_text_string);
+        Serial.write(ACK);
+        Serial.println("OK");           //output the first part of the response without a newline
+        serial_command_execution_complete=1;  //indicates completed command 
+      }  //end of if(!strcmp(&serial_command_parameters[1][0],"TEXT"))
+      
+    }  //end of if( !strcmp(&serial_command_parameters[0][0],"LCD") )
+    // end of LCD    
+        
+    // check for LCD with unknown parameter
+    // must appear after all other options for LCD
+    if( !strcmp(&serial_command_parameters[0][0],"LCD") &&
+        (!serial_command_execution_complete) 
+      )
+    {
+        Serial.write(NACK);
+        Serial.print("ERROR:");
+        Serial.println(ERROR_INVALID_PARAMETER);  
+        serial_command_execution_complete=1;  //indicates completed command
+    }
+    // end of check for LCD with unknown parameter
+}// end of LCD_handler()
+
+
+void LED_handler()
+{
+    int current_led=-1;
+    char temp_string[100];
+    // beginning of LED:BUILTIN
+    if( !strcmp(&serial_command_parameters[0][0],"LED") )
+    {
+      if(!strcmp(&serial_command_parameters[1][0],"BUILTIN")) 
+      {
+        current_led = LED_BUILTIN;
+      }
+      if(!strcmp(&serial_command_parameters[1][0],"GREEN") )
+      {
+        current_led = LED_GREEN;
+      }      
+      if(!strcmp(&serial_command_parameters[1][0],"YELLOW") )
+      {
+        current_led = LED_YELLOW;
+      }      
+      if(!strcmp(&serial_command_parameters[1][0],"RED") )
+      {
+        current_led = LED_RED;
+      }  
+      if(!strcmp(&serial_command_parameters[1][0],"BLUE") )
+      {
+        current_led = LED_BLUE;
+      }
+      if(!strcmp(&serial_command_parameters[1][0],"WHITE") )
+      {
+        current_led = LED_WHITE;
+      }     
+      if(current_led < 0)
+      {
+        Serial.write(NACK);
+        Serial.print("ERROR:");
+        Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+        serial_command_execution_complete=1; 
+        return;         
+      }
+      
+      if(!strcmp(&serial_command_parameters[2][0],"?"))  //request LED state
+      {
+        Serial.write(ACK);
+        sprintf(temp_string,"%s:%s:",&serial_command_parameters[0][0],&serial_command_parameters[1][0]);
+        Serial.print(temp_string);
+        Serial.println(digitalRead(current_led));
+        serial_command_execution_complete=1;  //indicates completed command
+      }
+      else if(!strcmp(&serial_command_parameters[2][0],"0")) //turn LED off
+      {
+        Serial.write(ACK);
+        digitalWrite(current_led,0);
+        Serial.println("OK");
+        serial_command_execution_complete=1;  //indicates completed command
+      }
+      else if(!strcmp(&serial_command_parameters[2][0],"1"))  //turn LED on
+      {
+        Serial.write(ACK);
+        digitalWrite(current_led,1);
+        Serial.println("OK");
+        serial_command_execution_complete=1;  //indicates completed command
+      }
+      else                                    // something else
+      {
+        Serial.write(NACK);
+        Serial.print("ERROR:");
+        Serial.println(ERROR_INVALID_DATA);  //LED can be 0 (off) or 1 (on), any other value is invalid
+        serial_command_execution_complete=1;  //indicates completed command
+      }
+    }
+    
+
+
+
+    // check for LED with unknown parameter
+    // must appear after all other options for LED
+    if( !strcmp(&serial_command_parameters[0][0],"LED") &&
+        (!serial_command_execution_complete) 
+      )
+    {
+        Serial.write(NACK);
+        Serial.print("ERROR:");
+        Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+        serial_command_execution_complete=1;  //indicates completed command
+    }
+    // end of check for LED with unknown parameter  
+} //end of LED_handler()
+
+
+void SWITCH_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"SWITCH") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("SWITCH:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of SWITCH_handler()
+
+void BUTTON_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"BUTTON") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("BUTTON:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of BUTTON_handler()
+
+void BUZZER_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"BUZZER") )
+  {
+    if(!strcmp(&serial_command_parameters[1][0],"1") )
+    {
+    digitalWrite(BUZZER,1);
+        Serial.write(ACK);
+    Serial.println("OK");
+    serial_command_execution_complete=1;
+    }
+    else if(!strcmp(&serial_command_parameters[1][0],"0") )
+     {
+    digitalWrite(BUZZER,0);
+        Serial.write(ACK);
+    Serial.println("OK");
+    serial_command_execution_complete=1;
+    } 
+     else if(!strcmp(&serial_command_parameters[1][0],"?") )
+     {
+    
+        Serial.write(ACK);
+    Serial.print("BUZZER:");
+    Serial.println(digitalRead(BUZZER));
+    serial_command_execution_complete=1;
+    } 
+    else
+    { 
+        //**********NEED CODE HERE
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER); 
+        serial_command_execution_complete=1;  //indicates completed command
+    }
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of BUZZER_handler()  
+
+
+void PWM_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"PWM") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("PWM:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of PWM_handler()
+
+
+void ADC_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"ADC") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("ADC:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of ADC_handler()
+
+void DCMOTOR_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"DCMOTOR") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("DCMOTOR:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of DCMOTOR_handler()
+
+void SERVO_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"SERVO") )
+  {
+    if(!strcmp(&serial_command_parameters[1][0],"3")
+    {
+      pulsewidth=atoi(&serial_command_parameters[2][0]);
+      servo3.WriteMicroseconds(pulsewidth);
+    }
+    }
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("SERVO:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of SERVO_handler()
+
+void STEPPER_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"STEPPER") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("STEPPER:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of STEPPER_handler()
+
+void MAX7219_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"MAX7219") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("MAX7219:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command.
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of MAX7219_handler()
+
+void DS3231_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"DS3231") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("DS3231:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of DS3231_handler()
+
+void MPU6050_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"MPU6050") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("MPU6050:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of MPU6050_handler()
+
+void DHT11_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"DHT11") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("DHT11:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of DHT11_handler()
+
+void SEG7_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"SEG7") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("SEG7:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of SEG7_handler()
+
+void AT24C32_handler()
+{
+  if( !strcmp(&serial_command_parameters[0][0],"AT24C32") )
+  {
+    //**********NEED CODE HERE
+    Serial.write(ACK);
+    Serial.println("AT24C32:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command.
+  }
+  
+  // check for case with unknown parameter
+  // must appear after all other options for function
+  if( !serial_command_execution_complete ) 
+  {
+    Serial.write(NACK);
+    Serial.print("ERROR:");
+    Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
+    serial_command_execution_complete=1;  //indicates completed command
+  }
+  // end of check for  unknown parameter
+} //end of AT24C32_handler()
