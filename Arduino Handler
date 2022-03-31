@@ -1,3 +1,6 @@
+#include <Key.h>
+#include <Keypad.h>
+
 /*
  * example2.ino
  * revision date: 30 May 2021
@@ -21,7 +24,7 @@
 /* please note reliance on libraries "Keypad.h" and "LiquidCrystal.h" which may need to be installed */
 #include "ee3420_mega_aux_board.h"
 //#include "ee3420_mega_handlers.h"
-#include "keypad.h"
+
 
 
 void setup() {
@@ -38,6 +41,8 @@ void setup() {
   //wait for the ENQ/ACK handshake to be initialized by the Raspberry Pi
   //function should be called in setup()
   //function defined in ee3420_mega.h
+
+  
   serial_wait_for_enquire();  
 
   digitalWrite(LED_BUILTIN,1);  //turn built in LED on to indicate synchronization with remote microprocessor
@@ -45,6 +50,11 @@ void setup() {
   //initially clear the serial command receive buffer in case there was random data in the variables on startup
   //this should always be done before entering loop()
   clear_serial_receive_buffer();
+
+ 
+
+ 
+  
    
 }  //end of setup()
 
@@ -623,17 +633,17 @@ void DCMOTOR_handler()
 
 void SERVO_handler()
 {
-  if( !strcmp(&serial_command_parameters[0][0],"SERVO") )
+if( !strcmp(&serial_command_parameters[0][0],"SERVO") )
   {
-    if(!strcmp(&serial_command_parameters[1][0],"3")
+    if(!strcmp(&serial_command_parameters[1][0],"3"))
     {
-      pulsewidth=atoi(&serial_command_parameters[2][0]);
-      servo3.WriteMicroseconds(pulsewidth);
+    int pulsewidth  = atoi(&serial_command_parameters[2][0]);
+      servo3.writeMicroseconds(pulsewidth);
     }
-    }
-    //**********NEED CODE HERE
+
+ 
     Serial.write(ACK);
-    Serial.println("SERVO:NOT IMPLEMENTED YET");
+    Serial.println("OK");
     serial_command_execution_complete=1;  //indicates completed command
   }
   
