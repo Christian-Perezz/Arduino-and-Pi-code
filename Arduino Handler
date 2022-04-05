@@ -5,6 +5,7 @@
  * example2.ino
  * revision date: 30 May 2021
  * Written by: William Stapleton
+ * Edited and provisioned by Christian Perez
  * The purpose of this program is to demonstrate the associated header file functions
  * for building a communications protocol with the Raspberry Pi 4 which will be
  * needed for the EE 3420 laboratory assignments in the Spring 2021 semester.
@@ -591,23 +592,33 @@ void ADC_handler()
 {
   if( !strcmp(&serial_command_parameters[0][0],"ADC") )
   {
-    int adc_channel = atoi(&serial_command_parameters[1][0],"5");
+    if( !strcmp(&serial_command_parameters[1][0], "5")) //port 5 x axis
+    {
+    int adc_channel = atoi(&serial_command_parameters[1][0]);
 
     int adc_value = analogRead(A0 + adc_channel);
 
 
-    serial.print("ADC:"):
-    serial.print(adc_channel);
-    serial.print(":");
-    serial.println(adc_value);
+    Serial.print("ADC:");
+    Serial.print(adc_channel);
+    Serial.print(":");
+    Serial.println(adc_value);
+    }
+    
+    if( !strcmp(&serial_command_parameters[1][0], "4")) //port 4 y axis
+    {
+    int adc_channel = atoi(&serial_command_parameters[1][0]);
+
+    int adc_value = analogRead(A0 + adc_channel);
+
+
+    Serial.print("ADC:");
+    Serial.print(adc_channel);
+    Serial.print(":");
+    Serial.println(adc_value);
+    }
   }
-    Serial.write(ACK);
-    Serial.println("ADC:NOT IMPLEMENTED YET");
-    serial_command_execution_complete=1;  //indicates completed command
-  }
-  
-  // check for case with unknown parameter
-  // must appear after all other options for function
+
   if( !serial_command_execution_complete ) 
   {
     Serial.write(NACK);
@@ -615,6 +626,9 @@ void ADC_handler()
     Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
     serial_command_execution_complete=1;  //indicates completed command
   }
+    Serial.write(ACK);
+    Serial.println("ADC:NOT IMPLEMENTED YET");
+    serial_command_execution_complete=1;  //indicates completed command
   // end of check for  unknown parameter
 } //end of ADC_handler()
 
