@@ -592,7 +592,7 @@ void ADC_handler()
 {
   if( !strcmp(&serial_command_parameters[0][0],"ADC") )
   {
-    if( !strcmp(&serial_command_parameters[1][0], "5")) //port 5 x axis
+    if( !strcmp(&serial_command_parameters[1][0], "5")) //port 5 X axis joystick
     {
     int adc_channel = atoi(&serial_command_parameters[1][0]);
 
@@ -605,7 +605,7 @@ void ADC_handler()
     Serial.println(adc_value);
     }
     
-    if( !strcmp(&serial_command_parameters[1][0], "4")) //port 4 y axis
+    if( !strcmp(&serial_command_parameters[1][0], "4")) //port 4 Y axis joystick
     {
     int adc_channel = atoi(&serial_command_parameters[1][0]);
 
@@ -619,6 +619,32 @@ void ADC_handler()
     }
   }
 
+  if( !strcmp(&serial_command_parameters[1][0], "0")) //port A0 temp senors
+    {
+    int adc_channel = atoi(&serial_command_parameters[1][0]);
+
+    int adc_value = analogRead(A0 + adc_channel);
+
+
+    Serial.print("ADC:");
+    Serial.print(adc_channel);
+    Serial.print(":");
+    Serial.println(adc_value);
+    }
+
+  if( !strcmp(&serial_command_parameters[1][0], "1")) //port A1 photoresistor
+    {
+    int adc_channel = atoi(&serial_command_parameters[1][0]);
+
+    int adc_value = analogRead(A0 + adc_channel);
+
+
+    Serial.print("ADC:");
+    Serial.print(adc_channel);
+    Serial.print(":");
+    Serial.println(adc_value);
+    }
+
   if( !serial_command_execution_complete ) 
   {
     Serial.write(NACK);
@@ -626,9 +652,6 @@ void ADC_handler()
     Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
     serial_command_execution_complete=1;  //indicates completed command
   }
-    Serial.write(ACK);
-    Serial.println("ADC:NOT IMPLEMENTED YET");
-    serial_command_execution_complete=1;  //indicates completed command
   // end of check for  unknown parameter
 } //end of ADC_handler()
 
