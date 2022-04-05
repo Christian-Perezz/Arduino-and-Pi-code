@@ -591,7 +591,16 @@ void ADC_handler()
 {
   if( !strcmp(&serial_command_parameters[0][0],"ADC") )
   {
-    //**********NEED CODE HERE
+    int adc_channel = atoi(&serial_command_parameters[1][0],"5");
+
+    int adc_value = analogRead(A0 + adc_channel);
+
+
+    serial.print("ADC:"):
+    serial.print(adc_channel);
+    serial.print(":");
+    serial.println(adc_value);
+  }
     Serial.write(ACK);
     Serial.println("ADC:NOT IMPLEMENTED YET");
     serial_command_execution_complete=1;  //indicates completed command
