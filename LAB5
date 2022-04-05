@@ -30,51 +30,132 @@ int loop_active;
 int override = 0;
  
 char lcdText[100];
+char x[3];
+char y[3];
+
 int joystick_center = 512,
     joystickX = 0,
-    joystickY = 0,
-    range = 0;
+    joystickXp = 0,
+    rangeX = 0,
+    rangeY = 0,
+    temperature = 0,
+    resistance = 0; 
 
-const int dc = 500000;
+const int m1 = 24;
 
 void joystick()
 {
-    sprintf(command_string,"ADC:4:%i", (joystickY));
+    gpioWrite(LED_GREEN, 1);
+
+    sprintf(command_string,"LED:GREEN:1");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
 
-    sprintf(command_string,"ADC:5:%i", (joystickX));
+    sprintf(command_string,"ADC:4:%s", (y));
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
+
+    sprintf(command_string,"ADC:5:%s", (y));
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+    joystickX = atoi(x);
+    joystickY = atoi(y);
 
     if(joystick_center < 510) //joystick center is 2 away form center on either side to give a deadzone
     {
-        joystickX = 
+        joystickXp = ((rangeX - 512) / 512); 
     }
     if(joystickcenter > 514)
     {
-        joystickX = 
+        joystickXp = ((rangeX - 512) / 512);
     }
     if(joystickcenter < 510)
     {
-        joystickY = 
+        joystickYp = ((rangeY - 512) / 512);
     }
     if(joystickcenter > 514)
     {
-        joystickY = 
+        joystickYp = ((rangeY - 512) / 512);
     }
 }
 
 void temp()
 {
+    sprintf(command_string,"ADC:0:%i", (temperature));
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
 
+    if(temperature > 25)
+    {
+        gpioPWM(m1, 253); //motor is on port 24 on pi
+
+        sprintf(command_string,"LED:RED:1");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_RED, 1);
+
+        sprintf(command_string,"LED:GREEN:0");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_GREEN, 0);
+    }
+    if(temperature < 25)
+    {
+        gpioPWM(m1, 0);
+
+        sprintf(command_string,"LED:RED:0");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_RED, 0);
+
+        sprintf(command_string,"LED:GREEN:1");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_GREEN, 1);
+    }
 }
 
 void light()
 {
+    sprintf(command_string,"LIGHT:1:%i", (resistance));
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
 
+    if(resistance > 10000)
+    {
+        sprintf(command_string,"LED:WHITE:1");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_WHITE, 1);
+
+        sprintf(command_string,"LED:GREEN:1");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_GREEN, 1);
+    }
+
+    if(resistance < 10000)
+    {
+        sprintf(command_string,"LED:WHITE:0");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_WHITE, 0);
+
+        sprintf(command_string,"LED:GREEN:0");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+
+        gpioWrite(LED_GREEN, 0);
+    }
 }
-
 
 void lcdDisplayText(char text[]) //intializes character spaces for LCD
 {
@@ -111,7 +192,7 @@ void lcdReset() //resets LCD information to blank
 
 void updateLCD() //update LCD screen
 {
-    snprintf(lcdText, sizeof(lcdText), "X:%i Y:%i" ,joystickX, joystickY);
+    snprintf(lcdText, sizeof(lcdText), "X:%i Y:%i" ,rangeX, rangeY);
     lcdReset();
     lcdDisplayText(lcdText);
 }
@@ -206,6 +287,17 @@ void checkForKeypress()
         }  //end of switch(keys_received[0])
 }
 
+void (LEDS_OFF)
+{
+    sprintf(command_string,"LED:RED:1");
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+    sprintf(command_string,"LED:WHITE:0");
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+}
+
 int main()
 {       
     if(ee3420_startup() < 0)
@@ -227,6 +319,7 @@ int main()
     }
 
  lcdReset(); // reset lcd and stepper motor and LEDs
+ LEDS_OFF();
 	
  return(ee3420_shutdown());	//shutdown call routine
 }
