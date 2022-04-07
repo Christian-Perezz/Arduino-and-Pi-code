@@ -591,59 +591,47 @@ void PWM_handler()
 void ADC_handler()
 {
   if( !strcmp(&serial_command_parameters[0][0],"ADC") )
-  {
-    if( !strcmp(&serial_command_parameters[1][0], "5")) //port 5 X axis joystick
+ {
+  if( !strcmp(&serial_command_parameters[1][0], "5")) //port 5 X axis joystick
     {
     int adc_channel = atoi(&serial_command_parameters[1][0]);
 
-    int adc_value = analogRead(A0 + adc_channel);
+    int x = analogRead(A0 + adc_channel);
 
-
+    Serial.write(ACK);
     Serial.print("ADC:");
     Serial.print(adc_channel);
     Serial.print(":");
-    Serial.println(adc_value);
+    Serial.println(x);
+    serial_command_execution_complete=1;
     }
     
-    if( !strcmp(&serial_command_parameters[1][0], "4")) //port 4 Y axis joystick
+  if( !strcmp(&serial_command_parameters[1][0], "4")) //port 4 Y axis joystick
     {
     int adc_channel = atoi(&serial_command_parameters[1][0]);
 
-    int adc_value = analogRead(A0 + adc_channel);
+    int y = analogRead(A0 + adc_channel);
 
-
+    Serial.write(ACK);
     Serial.print("ADC:");
     Serial.print(adc_channel);
     Serial.print(":");
-    Serial.println(adc_value);
-    }
-  }
-
-  if( !strcmp(&serial_command_parameters[1][0], "0")) //port A0 temp senors
-    {
-    int adc_channel = atoi(&serial_command_parameters[1][0]);
-
-    int adc_value = analogRead(A0 + adc_channel);
-
-
-    Serial.print("ADC:");
-    Serial.print(adc_channel);
-    Serial.print(":");
-    Serial.println(adc_value);
+    Serial.println(y);
+    serial_command_execution_complete=1;
     }
 
   if( !strcmp(&serial_command_parameters[1][0], "1")) //port A1 photoresistor
     {
     int adc_channel = atoi(&serial_command_parameters[1][0]);
 
-    int adc_value = analogRead(A0 + adc_channel);
+    int voltage = analogRead(A0 + adc_channel);
 
-
+    Serial.write(ACK);
     Serial.print("ADC:");
     Serial.print(adc_channel);
     Serial.print(":");
-    Serial.println(adc_value);
-    }
+    Serial.println(voltage);
+    serial_command_execution_complete=1;
 
   if( !serial_command_execution_complete ) 
   {
