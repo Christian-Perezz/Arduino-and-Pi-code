@@ -108,74 +108,83 @@ void joystick()
 
 void temp()
 {
-    sprintf(command_string,"ADC:0:%i", (temperature));
+    sprintf(command_string,"DHT11:0:?\n");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
 
-    if(temperature > 25)
-    {
-        gpioPWM(m1, 253); //motor is on port 24 on pi
+    temperature = (1/0.01)*(0.00488/serial_receive_buffer[2]);
 
-        sprintf(command_string,"LED:RED:1");
+    if(temperature > 77)
+    {
+        sprintf(command_string,"LED:RED:1\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
         gpioWrite(LED_RED, 1);
 
-        sprintf(command_string,"LED:GREEN:0");
+        sprintf(command_string,"LED:GREEN:0\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
         gpioWrite(LED_GREEN, 0);
-    }
-    if(temperature < 25)
-    {
-        gpioPWM(m1, 0);
 
-        sprintf(command_string,"LED:RED:0");
+        sprintf(command_string,"DCMOTOR:43:255\n"); //motor:port#:pulsewidth 
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
+    }
+
+    if(temperature < 77)
+    {
+        sprintf(command_string,"LED:RED:0\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
         gpioWrite(LED_RED, 0);
 
-        sprintf(command_string,"LED:GREEN:1");
+        sprintf(command_string,"LED:GREEN:1\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
         gpioWrite(LED_GREEN, 1);
+
+        sprintf(command_string,"DCMOTOR:43:0\n");
+        serial_send_request(serial_handle, command_string, serial_receive_buffer);
+        process_serial_response(serial_receive_buffer);
     }
 }
 
 void light()
 {
-    sprintf(command_string,"LIGHT:1:%i", (resistance));
+    sprintf(command_string,"ADC:1:1\n");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
 
-    if(resistance > 10000)
+    voltage = serial_receive_buffer[2]);
+
+    if(voltage > 2.5)
     {
-        sprintf(command_string,"LED:WHITE:1");
+        sprintf(command_string,"LED:WHITE:1\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
         gpioWrite(LED_WHITE, 1);
 
-        sprintf(command_string,"LED:GREEN:1");
+        sprintf(command_string,"LED:GREEN:0\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
         gpioWrite(LED_GREEN, 1);
     }
 
-    if(resistance < 10000)
+    if(voltage < 2.5)
     {
-        sprintf(command_string,"LED:WHITE:0");
+        sprintf(command_string,"LED:WHITE:0\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
         gpioWrite(LED_WHITE, 0);
 
-        sprintf(command_string,"LED:GREEN:0");
+        sprintf(command_string,"LED:GREEN:1\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
