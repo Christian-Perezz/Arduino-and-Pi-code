@@ -160,10 +160,10 @@ void loop() {
       MPU6050_handler();
     }    
 
-    if( !strcmp(&serial_command_parameters[0][0],"DHT11") )
+    /*if( !strcmp(&serial_command_parameters[0][0],"DHT11") )
     {
       DHT11_handler();
-    }    
+    } */   
 
     if( !strcmp(&serial_command_parameters[0][0],"SEG7") )
     {
@@ -632,7 +632,23 @@ void ADC_handler()
     Serial.print(":");
     Serial.println(voltage);
     serial_command_execution_complete=1;
+    }
 
+    if( !strcmp(&serial_command_parameters[1][0], "0")) //port A0 temperature
+    {
+    int adc_channel = atoi(&serial_command_parameters[1][0]);
+
+    int temperature = analogRead(A0 + adc_channel);
+
+    Serial.write(ACK);
+    Serial.print("ADC:");
+    Serial.print(adc_channel);
+    Serial.print(":");
+    Serial.println(temperature);
+    serial_command_execution_complete=1;
+    }
+ }
+ 
   if( !serial_command_execution_complete ) 
   {
     Serial.write(NACK);
@@ -649,13 +665,13 @@ void DCMOTOR_handler()
   {
     if(!strcmp(&serial_command_parameters[1][0],"43"))
     {
-    int pulsewidth  = atoi(&serial_command_parameters[2][0]);
-      MOTOR_PWM43.writeMicroseconds(pulsewidth);
+    int pulsewidth1  = atoi(&serial_command_parameters[2][0]);
+      analogWrite(MOTOR_PWM, pulsewidth1);
       analogWrite(MOTOR_CW, 1);
     }
     
     Serial.write(ACK);
-    Serial.println("DCMOTOR:NOT IMPLEMENTED YET");
+    Serial.println("OK");
     serial_command_execution_complete=1;  //indicates completed command
   }
   
@@ -787,7 +803,7 @@ void MPU6050_handler()
   // end of check for  unknown parameter
 } //end of MPU6050_handler()
 
-void DHT11_handler()
+/*void DHT11_handler()
 {
   if( !strcmp(&serial_command_parameters[0][0],"DHT11") )
   {
@@ -801,9 +817,10 @@ void DHT11_handler()
     Serial.print("ADC:");
     Serial.print(adc_channel);
     Serial.print(":");
-    Serial.println(adc_value);
+    Serial.println(temperature);
     serial_command_execution_complete=1;  //indicates completed command
-  
+    }
+    
   if( !serial_command_execution_complete ) 
   {
     Serial.write(NACK);
@@ -811,9 +828,10 @@ void DHT11_handler()
     Serial.println(ERROR_INVALID_PARAMETER);  //LED can be 0 (off) or 1 (on), any other value is invalid
     serial_command_execution_complete=1;  //indicates completed command
   }
+  }
   // end of check for  unknown parameter
 } //end of DHT11_handler()
-
+)*/
 void SEG7_handler()
 {
   if( !strcmp(&serial_command_parameters[0][0],"SEG7") )
