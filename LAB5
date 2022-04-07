@@ -41,42 +41,71 @@ int joystick_center = 512,
     temperature = 0,
     resistance = 0; 
 
-const int m1 = 24;
+void leds_off()
+{
+    gpioWrite(LED_GREEN,0);
+    gpioWrite(LED_YELLOW,0);  
+    gpioWrite(LED_RED,0);
+    gpioWrite(LED_BLUE,0);
+    gpioWrite(LED_WHITE,0);
+    
+        sprintf(command_string,"LED:RED:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+        sprintf(command_string,"LED:YELLOW:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+    
+        sprintf(command_string,"LED:GREEN:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+        sprintf(command_string,"LED:BLUE:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+
+        sprintf(command_string,"LED:WHITE:0\n");  
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+}
 
 void joystick()
 {
     gpioWrite(LED_GREEN, 1);
 
-    sprintf(command_string,"LED:GREEN:1");
+    sprintf(command_string,"LED:GREEN:1\n");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
 
-    sprintf(command_string,"ADC:4:%s", (y));
+    sprintf(command_string,"ADC:4:?\n");
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+    
+    joystickX = atoi(&serial_command_parameters[2][0]); 
+   
+    sprintf(command_string,"ADC:5:?\n");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
 
-    sprintf(command_string,"ADC:5:%s", (y));
-    serial_send_request(serial_handle, command_string, serial_receive_buffer);
-    process_serial_response(serial_receive_buffer);
 
-    joystickX = atoi(x);
-    joystickY = atoi(y);
-
-    if(joystick_center < 510) //joystick center is 2 away form center on either side to give a deadzone
+    joystickY = atoi(&serial_command_parameters[2][0]); 
+    
+    if(joystickX < 510) //joystick center is 2 away form center on either side to give a deadzone
     {
-        joystickXp = ((rangeX - 512) / 512); 
+        rangeX = ((joystickX - 512) / 512); 
     }
-    if(joystickcenter > 514)
+    if(joystickX > 514)
     {
-        joystickXp = ((rangeX - 512) / 512);
+        rangeX = ((joystickX - 512) / 512);
     }
-    if(joystickcenter < 510)
+    if(joystickY < 510)
     {
-        joystickYp = ((rangeY - 512) / 512);
+        rangeY = ((joystickY - 512) / 512);
     }
-    if(joystickcenter > 514)
+    if(joystickY > 514)
     {
-        joystickYp = ((rangeY - 512) / 512);
+        rangeY = ((joystickY - 512) / 512);
     }
 }
 
