@@ -31,12 +31,15 @@ char x[3];
 char y[3];
 
 float joystick_center = 512,
-    joystickX = 0,
-    joystickY = 0,
-    rangeX = 0,
-    rangeY = 0,
-    temperature = 0,
-    resistance = 0;
+      joystickX = 0,
+      joystickY = 0,
+      rangeX = 0,
+      rangeY = 0,
+      temperature = 0,
+      sample = 0,
+      resistance = 0,
+      raw = 0,
+      milivolts = 0;
 
 void leds_off()
 {
@@ -69,12 +72,12 @@ void leds_off()
 
 void joystick()
 {
-    gpioWrite(LED_GREEN, 1);
+	gpioWrite(LED_GREEN, 1);
 
     sprintf(command_string,"LED:GREEN:1\n");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
-
+    
     sprintf(command_string,"ADC:4:?\n");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
@@ -108,13 +111,17 @@ void joystick()
 
 void temp()
 {
-    sprintf(command_string,"DHT11:0:?\n");
+    sprintf(command_string,"ADC:0:?\n");
+    printf("sent: %s\n",command_string);
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
+    printf("response: %s\n",serial_receive_buffer);
 
-    temperature = (1/0.01)*(0.00488/serial_receive_buffer[2]);
+    raw = atof(&serial_command_parameters[2][0]);
+    milivolts = (raw * (5.0/1024.0) * 1000.0);
+    temperature = (milivolts -400.0) / 19.5;    
 
-    if(temperature > 77)
+    if(temperature > 77.0)
     {
         sprintf(command_string,"LED:RED:1\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
@@ -133,7 +140,7 @@ void temp()
         process_serial_response(serial_receive_buffer);
     }
 
-    if(temperature < 77)
+    if(temperature < 77.0)
     {
         sprintf(command_string,"LED:RED:0\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
@@ -155,13 +162,15 @@ void temp()
 
 void light()
 {
-    sprintf(command_string,"ADC:1:1\n");
+    sprintf(command_string,"ADC:1:?\n");
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
+	printf("sent: %s\n",command_string);
+	printf("response: %s\n",serial_receive_buffer);
+	
+    sample = atof(&serial_command_parameters[2][0]);
 
-    voltage = serial_receive_buffer[2]);
-
-    if(voltage > 2.5)
+    if(sample > 2.5)
     {
         sprintf(command_string,"LED:WHITE:1\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
@@ -173,10 +182,10 @@ void light()
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
-        gpioWrite(LED_GREEN, 1);
+        gpioWrite(LED_GREEN, 0);
     }
 
-    if(voltage < 2.5)
+    if(sample < 2.5)
     {
         sprintf(command_string,"LED:WHITE:0\n");
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
@@ -188,7 +197,7 @@ void light()
         serial_send_request(serial_handle, command_string, serial_receive_buffer);
         process_serial_response(serial_receive_buffer);
 
-        gpioWrite(LED_GREEN, 0);
+        gpioWrite(LED_GREEN, 1);
     }
 }
 
@@ -227,7 +236,8 @@ void lcdReset() //resets LCD information to blank
 
 void updateLCD() //update LCD screen
 {
-    snprintf(lcdText, sizeof(lcdText), "X:%i Y:%i" ,rangeX, rangeY);
+	
+    snprintf(lcdText, sizeof(lcdText), "X:%4.2f Y:%4.2f" ,temperature, resistance); 
     lcdReset();
     lcdDisplayText(lcdText);
 }
@@ -322,17 +332,6 @@ void checkForKeypress()
         }  //end of switch(keys_received[0])
 }
 
-void (LEDS_OFF)
-{
-    sprintf(command_string,"LED:RED:1");
-    serial_send_request(serial_handle, command_string, serial_receive_buffer);
-    process_serial_response(serial_receive_buffer);
-
-    sprintf(command_string,"LED:WHITE:0");
-    serial_send_request(serial_handle, command_string, serial_receive_buffer);
-    process_serial_response(serial_receive_buffer);
-}
-
 int main()
 {       
     if(ee3420_startup() < 0)
@@ -354,7 +353,7 @@ int main()
     }
 
  lcdReset(); // reset lcd and stepper motor and LEDs
- LEDS_OFF();
+ leds_off();
 	
  return(ee3420_shutdown());	//shutdown call routine
 }
