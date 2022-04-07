@@ -6,9 +6,6 @@ EE3420 Dr. Stapltons modified shell code for stepper motor control
  * comment this out to stop debug messaging
 */
 #define DEBUG
-
-const int spkr1 = 12,
-          spkr2 = 13;
           
 #include "ee3420_pi.h"
 /* the ee3420_pi_aux_board.h header includes definitions for the auxiliary PCB. */
@@ -33,13 +30,13 @@ char lcdText[100];
 char x[3];
 char y[3];
 
-int joystick_center = 512,
+float joystick_center = 512,
     joystickX = 0,
-    joystickXp = 0,
+    joystickY = 0,
     rangeX = 0,
     rangeY = 0,
     temperature = 0,
-    resistance = 0; 
+    resistance = 0;
 
 void leds_off()
 {
