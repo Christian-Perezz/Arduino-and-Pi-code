@@ -620,6 +620,20 @@ void ADC_handler()
     serial_command_execution_complete=1;
     }
 
+ if( !strcmp(&serial_command_parameters[1][0], "2")) //port A2 for potentiometer
+    {
+    int adc_channel = atoi(&serial_command_parameters[1][0]);
+
+    int a2 = analogRead(A0 + adc_channel);
+
+    Serial.write(ACK);
+    Serial.print("ADC:");
+    Serial.print(adc_channel);
+    Serial.print(":");
+    Serial.println(a2);
+    serial_command_execution_complete=1;
+    }
+
   if( !strcmp(&serial_command_parameters[1][0], "1")) //port A1 photoresistor
     {
     int adc_channel = atoi(&serial_command_parameters[1][0]);
