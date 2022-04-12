@@ -5,11 +5,7 @@ EE3420 Dr. Stapltons modified shell code for stepper motor control
 /* include #define DEBUG to allow for debugging tools and messages
  * comment this out to stop debug messaging
 */
-#define DEBUG
-
-const int spkr1 = 12,
-          spkr2 = 13;
-          
+#define DEBUG          
 #include "ee3420_pi.h"
 /* the ee3420_pi_aux_board.h header includes definitions for the auxiliary PCB. */
 /* the header should be included */
@@ -29,9 +25,6 @@ char command_parameters[max_parameter_limit][max_parameter_length];
 char keys_received[3]={0,0,0};
 int loop_active;
 int override = 0;
-
-int flag; //SPI handlers
-int handle_74HC595;
  
 char lcdText[100];
 
@@ -46,109 +39,31 @@ float joystick_center = 512,
       sample1 = 0;
 
 int voltage = 0,
-    row1,
-    column1,
     rangeXi,
     rangeYi;
-
-
-
-int max_led_initialize(int spi_port, int ce_select, int rclk_pin)
+    
+int flag;
+int handle_74HC595;
+   
+void max_led()
 {
-	int flag1;
-	unsigned int max_flags;
-	max = rclk_pin; 
-	
-	if((spi_port < 0) || (spi_port > 1))
-	{
-		printf("spi_port must be either 0 or 1.  0 is primary SPI. 1 is auxillary SPI.\n");
-		return(-1);
-	}
-	
-	if(spi_port == 0)
-	{
-		if((ce_select < 0)||(ce_select > 1))
-		{
-			printf("For primary SPI, ce_select must be 0 or 1\n");
-			return(-1);
-		}
-	}
-	if(spi_port == 1)
-	{
-		if((ce_select < 0)||(ce_select > 2))
-		{
-			printf("For auxillary SPI, ce_select must be 0, 1, or 2\n");
-			return(-1);
-		}
-	}
 
-    spi_74hc595_flags=0;
-	
-	if (spi_port == 1)
-	{	spi_74hc595_flags = spi_74hc595_flags & BIT(8); } //bit 8 (A) selects the SPI unit
-	
-	//no other bits need to be set in flags for the 74HC595 
-	
-	spi_74hc595_handle=spiOpen(ce_select, 1000000, spi_74hc595_flags);
-	if(spi_74hc595_handle < 0)
-	{
-		printf("Unable to open SPI.  Error code %i\n",	spi_74hc595_handle);
-		return(spi_74hc595_handle);
-	}
-	
-	flag=gpioSetMode(spi_74hc595_rclk,PI_OUTPUT);
-	if(flag != 0)
-	{
-		printf("Unable to initialize pin %i, error code %i\n",spi_74hc595_rclk,flag);
-		return(-3);			
-	}
-	gpioWrite(spi_74hc595_rclk,0);
-	
-	return(spi_74hc595_handle);
-	
-}  //end of spi_74hc595_initialize(int spi_port, int ce_select, int rclk_pin)
-
-int spi_max_write(int handle, uint8_t data)
-{
-	int flag
-	char buf[1];
-	buf[0]=data;
-	if((flag=spiXfer(handle, buf, buf, 1)) <0) 
-	{
-		printf("Unable to access SPI handle %i, error code %i.\n",handle,flag);
-		return(-1);
-	}
-	gpioWrite(spi_74hc595_rclk,1);
-	gpioDelay(10);
-	gpioWrite(spi_74hc595_rclk,0);	
-	return(0);
-	
 }
 
-void max_led_arr()
-{
-    rangeXi = atoi(rangeX);
-    rangeYi = atoi(rangeY);
 
-    for(int i = 0, i < 9, i++)
+int seg7led()
+{   
+    flag = handle_74HC595 = spi_74hc595_initialize(0,1,24); 
+    if(flag < 0)
     {
-        arrled[i][] = rangeX;
-        spi_max_write(handle_74HC595, arrled[i][j]);
-
-        for(int j = 0, j < 9, j++)
-        {
-            arrled[][j] = rangeY;
-            spi_max_write(handle_74HC595, arrled[i][j];
-        }
-        gpioDelay(500000);
-    }
-}
-
-
-void seg7led()
-{
+        printf("Unable to initialize spi_74hc595, error code %i\n",flag);
+        return(-2);
+    } 
+    
     spi_74hc595_write(handle_74HC595, voltage);
 	gpioDelay(500000);
+	
+	return(0);
 }
 
 void joystick()
@@ -191,7 +106,7 @@ void potentiometer()
     serial_send_request(serial_handle, command_string, serial_receive_buffer);
     process_serial_response(serial_receive_buffer);
 
-    sample1 = atoi(serial_command_parameters[2][0]);
+    sample1 = atoi(&serial_command_parameters[2][0]);
     voltage = (sample1 / 16);  
 }
 
@@ -325,34 +240,8 @@ void checkForKeypress() //listens for keypad press
         }  //end of switch(keys_received[0])
 }
 
-void spi_initialize()
-{
-    flag=gpioInitialise();   //initialize GPIO interface from pigpio library
-    if(flag !=0)
-    {
-        printf("Unable to initialize GPIO, error code %i\n",flag);
-        return(-1);
-    }
-
-    flag = handle_74HC595 = spi_74hc595_initialize(0,1,11); 
-    if(flag < 0)
-    {
-        printf("Unable to initialize spi_74hc595, error code %i\n",flag);
-        return(-2);
-    } 
-
-    flag = handle_74HC595 = max_led_initialize(0,1,11); //handle name is shared for both displays
-    if(flag < 0)
-    {
-        printf("Unable to initialize spi_74hc595, error code %i\n",flag);
-        return(-2);
-    }
-}
-
 int main()
 {       
-    spi_initialize(); 
-
     if(ee3420_startup() < 0)
     {
         return(ee3420_shutdown()); //startup error checking 
@@ -372,7 +261,5 @@ int main()
     }
 
  lcdReset(); // reset lcd and stepper motor and LEDs
- int spiClose(handle_74HC595);
-	
  return(ee3420_shutdown());	//shutdown call routine
 }
