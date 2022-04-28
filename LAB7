@@ -29,6 +29,13 @@ int loop_active;
 int override = 0;
  
 char lcdText[100];
+
+int accelX = 0,
+	accelY = 0,
+	accelZ = 0,
+	gyroX = 0,
+	gyroY = 0,
+	gyroZ = 0;
     
 uint8_t data[7];
 uint8_t address[8]= {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
@@ -131,6 +138,27 @@ uint8_t RTC_Read_time()
 	return(now);
 }
 
+void MPU()
+{
+	sprintf(command_string,"ACCEL:?:?:?\n");
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+    
+    accelX = atoi(&serial_command_parameters[1][0]);
+    accelY = atoi(&serial_command_parameters[2][0]); 
+    accelZ = atoi(&serial_command_parameters[3][0]); 
+    
+    sprintf(command_string,"GYRO:?:?:?\n");
+    serial_send_request(serial_handle, command_string, serial_receive_buffer);
+    process_serial_response(serial_receive_buffer);
+    
+    gyroX = atoi(&serial_command_parameters[1][0]);
+    gyroY = atoi(&serial_command_parameters[2][0]); 
+    gyroZ = atoi(&serial_command_parameters[3][0]); 
+    
+    printf("X = %d,Y = %d, Z = %d)", gyroX, gyroY, gyroZ); 
+}
+
 
 void lcdDisplayText(char text[]) //intializes character spaces for LCD
 {
@@ -167,7 +195,7 @@ void lcdReset() //resets LCD information to blank
 
 void updateLCD() //update LCD screen
 {
-    snprintf(lcdText, sizeof(lcdText), "X:%4.2f Y:%4.2f" ,rangeX, rangeY);
+    snprintf(lcdText, sizeof(lcdText), "X:%i Y:%i Z:%i" ,accelX, accelY, accelZ);
     lcdReset();
     lcdDisplayText(lcdText);
 }
@@ -201,6 +229,7 @@ void checkForKeypress() //listens for keypad press
         {
             case '1':
             {
+				
                 break;
             }  //end of case '1'
             case '2':
@@ -212,7 +241,8 @@ void checkForKeypress() //listens for keypad press
                 break;
             }  //end of case '3'
             case '4':
-            {                  
+            {         
+				RTC_Write_time(now);         
                 break;
             }  //end of case '4'
 
@@ -269,6 +299,7 @@ int main()
         return(ee3420_shutdown()); //startup error checking 
     }
     
+    gpioSetAlertFunc(4, MPU);
     RTC_init();//initilizing i2c on channl 1 address x0 and flag = 0 
     
     ee3420_pi_aux_board_setup();
@@ -278,6 +309,7 @@ int main()
     {
         updateLCD();
         checkForKeypress();
+        MPU();
     }
     
  
