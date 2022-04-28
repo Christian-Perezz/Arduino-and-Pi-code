@@ -1,5 +1,7 @@
 #include <Key.h>
 #include <Keypad.h>
+#include <SPI.h>
+#include <Wire.h>
 
 /*
  * example2.ino
@@ -158,7 +160,17 @@ void loop() {
     if( !strcmp(&serial_command_parameters[0][0],"MPU6050") )
     {
       MPU6050_handler();
-    }    
+    }   
+
+         if( !strcmp(&serial_command_parameters[0][0],"ACCEL") )
+    {
+      MPU6050_handler();
+    }  
+
+        if( !strcmp(&serial_command_parameters[0][0],"GYRO") )
+    {
+      MPU6050_handler();
+    }  
 
     /*if( !strcmp(&serial_command_parameters[0][0],"DHT11") )
     {
@@ -592,8 +604,7 @@ void ADC_handler()
 {
   if( !strcmp(&serial_command_parameters[0][0],"ADC") )
  {
-  if( !strcmp(&serial_command_parameters[1][0], "5")) //port 5 X axis joystick
-    {
+  
     int adc_channel = atoi(&serial_command_parameters[1][0]);
 
     int x = analogRead(A0 + adc_channel);
@@ -604,64 +615,10 @@ void ADC_handler()
     Serial.print(":");
     Serial.println(x);
     serial_command_execution_complete=1;
-    }
+  
     
-  if( !strcmp(&serial_command_parameters[1][0], "4")) //port 4 Y axis joystick
-    {
-    int adc_channel = atoi(&serial_command_parameters[1][0]);
+  }
 
-    int y = analogRead(A0 + adc_channel);
-
-    Serial.write(ACK);
-    Serial.print("ADC:");
-    Serial.print(adc_channel);
-    Serial.print(":");
-    Serial.println(y);
-    serial_command_execution_complete=1;
-    }
-
- if( !strcmp(&serial_command_parameters[1][0], "2")) //port A2 for potentiometer
-    {
-    int adc_channel = atoi(&serial_command_parameters[1][0]);
-
-    int a2 = analogRead(A0 + adc_channel);
-
-    Serial.write(ACK);
-    Serial.print("ADC:");
-    Serial.print(adc_channel);
-    Serial.print(":");
-    Serial.println(a2);
-    serial_command_execution_complete=1;
-    }
-
-  if( !strcmp(&serial_command_parameters[1][0], "1")) //port A1 photoresistor
-    {
-    int adc_channel = atoi(&serial_command_parameters[1][0]);
-
-    int voltage = analogRead(A0 + adc_channel);
-
-    Serial.write(ACK);
-    Serial.print("ADC:");
-    Serial.print(adc_channel);
-    Serial.print(":");
-    Serial.println(voltage);
-    serial_command_execution_complete=1;
-    }
-
-    if( !strcmp(&serial_command_parameters[1][0], "0")) //port A0 temperature
-    {
-    int adc_channel = atoi(&serial_command_parameters[1][0]);
-
-    int temperature = analogRead(A0 + adc_channel);
-
-    Serial.write(ACK);
-    Serial.print("ADC:");
-    Serial.print(adc_channel);
-    Serial.print(":");
-    Serial.println(temperature);
-    serial_command_execution_complete=1;
-    }
- }
  
   if( !serial_command_execution_complete ) 
   {
@@ -753,12 +710,35 @@ void STEPPER_handler()
 
 void MAX7219_handler()
 {
+  for(int i = 1; i<=8; i++)
+  { 
+  SPI.beginTransaction(SPISettings(1000000, LSBFIRST, SPI_MODE0));
+
+    digitalWrite(53, 0);
+    SPI.transfer(i);
+    SPI.transfer(0);
+    SPI.endTransaction();
+    digitalWrite(53, 1);
+  }
+  
   if( !strcmp(&serial_command_parameters[0][0],"MAX7219") )
   {
-    //**********NEED CODE HERE
+    SPI.beginTransaction(SPISettings(1000000, LSBFIRST, SPI_MODE0));
+    
+    int x = atoi(&serial_command_parameters[1][0]);
+
+    int y = atoi(&serial_command_parameters[2][0]);
+
+    digitalWrite(53, 0);
+    SPI.transfer(x);
+    SPI.transfer(y);
+    SPI.endTransaction();
+    digitalWrite(53, 1);
+
+
     Serial.write(ACK);
-    Serial.println("MAX7219:NOT IMPLEMENTED YET");
-    serial_command_execution_complete=1;  //indicates completed command.
+    Serial.println("OK");
+    serial_command_execution_complete=1;
   }
   
   // check for case with unknown parameter
@@ -797,16 +777,62 @@ void DS3231_handler()
 
 void MPU6050_handler()
 {
-  if( !strcmp(&serial_command_parameters[0][0],"MPU6050") )
+  if( !strcmp(&serial_command_parameters[0][0],"ACCEL") )
   {
-    //**********NEED CODE HERE
-    Serial.write(ACK);
-    Serial.println("MPU6050:NOT IMPLEMENTED YET");
+    int arr[14];
+    Wire.begin(0x60);
+    Wire.setClock(100000);
+  
+    Wire.beginTransmission(0x60);
+    Wire.write(0x3b);
+    delay(50);
+    Wire.requestFrom(0x60, 14);
+    
+    for(int i=0; i<14;i++)
+    {
+    arr[i]=Wire.read();
+    }
+
+    Wire.endTransmission(0x60);
+    
+    Serial.write(ACK);  //accel
+    Serial.print("GYRO:");
+    Serial.print(arr[0]*256+arr[1]);
+    Serial.print(":");
+    Serial.print(arr[2]*256+arr[3]);
+    Serial.print(":");
+    Serial.println(arr[4]*256+arr[5]);
     serial_command_execution_complete=1;  //indicates completed command
   }
   
-  // check for case with unknown parameter
-  // must appear after all other options for function
+      if( !strcmp(&serial_command_parameters[0][0],"GYRO") )
+  {
+    int arr[14];
+    Wire.begin(0x60);
+    Wire.setClock(100000);
+  
+    Wire.beginTransmission(0x60);
+    Wire.write(0x3b);
+    delay(50);
+    Wire.requestFrom(0x60, 14);
+    
+    for(int i=0; i<14;i++)
+    {
+    arr[i]=Wire.read();
+    }
+
+    Wire.endTransmission(0x60);
+    
+    Serial.write(ACK);  //accel
+    Serial.print("GYRO:");
+    Serial.print(arr[8]*256+arr[9]);
+    Serial.print(":");
+    Serial.print(arr[10]*256+arr[11]);
+    Serial.print(":");
+    Serial.println(arr[12]*256+arr[13]);
+    serial_command_execution_complete=1;
+  }
+ 
   if( !serial_command_execution_complete ) 
   {
     Serial.write(NACK);
